@@ -2,14 +2,14 @@
 
 # -*- coding: utf-8 -*-
 
-"""Usage: 
-    pymakeproj.py [-h | --help] 
+"""Usage:
+    pymakeproj.py [-h | --help]
     pymakeproj.py [-f | --file] [--author <authorname>] (<filename>)
     pymakeproj.py [--author <authorname>] (<filename>)
     pymakeproj.py [-f | --file] (<filename>)
     pymakeproj.py <filename>
 
--h --help    display help or exit 
+-h --help    display help or exit
 -f --file    just create a file, not a directory
 --author     author string other than the default
 filename     project / filename (.py will be added)
@@ -17,8 +17,7 @@ filename     project / filename (.py will be added)
 
 import os
 import sys
-from docopt import docopt 
-
+from docopt import docopt
 
 __author__ = "Alexander O'Connor"
 __copyright__ = "Copyright 2012, Alexander O'Connor"
@@ -44,7 +43,7 @@ __status__ = "Prototype"\n\n
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version=__version__)
-    
+
     print arguments
 
     if arguments['<filename>']:
