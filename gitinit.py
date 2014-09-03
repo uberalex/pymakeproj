@@ -2,9 +2,14 @@
 
 # -*- coding: utf-8 -*-
 """Usage:
-    gitinit.py <filename>
+    gitinit.py [-h | --help]
+    gitinit.py [-n <username> | --name <username>] [-e <email> | --email <email>] <path>
+    gitinit.py <path>
 
-filename     project / filename (.py will be added)
+-h --help   display help and exit
+-n --name   git config user.name (local)
+-e --email  git config user.email (local)
+path        path to the directory to create the repo
 """
 
 import os
@@ -15,6 +20,9 @@ from docopt import docopt
 
 #specific import for git
 import git
+# file adding and http
+import glob
+import requests
 
 __author__ = "Alexander O'Connor <Alex.OConnor@scss.tcd.ie>"
 __copyright__ = "Copyright 2014, Alexander O'Connor <Alex.OConnor@scss.tcd.ie>"
@@ -24,46 +32,64 @@ __version__ = "0.1"
 __email__ = "Alexander O'Connor <Alex.OConnor@scss.tcd.ie>"
 __status__ = "Prototype"
 
-filecontents = {'.gitignore':
-                            u'''#Some of this from https://github.com/github/gitignore
+#Create project files
+files = {
+    'README.md' : "# README \n The new README for the project \n",
+    'dotgitignore' : "http://www.gitignore.io/api/linux,vim,osx,python",
+}
 
-#OS files and Swap Files
-*~
-*.lock
-*.DS_Store
-*.swp
-*.out
 
-#Vim
-[._]*.s[a-w][a-z]
-[._]s[a-w][a-z]
-*.un~
-Session.vim
-.netrwhist
-*~
+def createFiles(path):
+    '''create basic files including the .gitignore and readme BEFORE the repo is made'''
+    for filename in files:
+        with open(filename.replace('dot','.'), 'w') as FILE:
+            if files[filename].startswith('http'):
+                r = requests.get(files[filename])
+                FILE.write(r.text)
+                print 'wrote %s from http' % filename
+            else:
+                FILE.write(files[filename])
+                print 'wrote %s' % filename
 
-#Python
-__pycache__/
-*.py[cod]''',
-                'README.md':
-                            u'#Blank Example README'}
+def addFilesAndCommit(repo, path):
+    '''at the end, add the files starting with the gitignore and readme'''
+    for filename in files:
+        print 'added %s' % filename.replace('dot','.')
+        repo.index.add([filename.replace('dot','.')])
+    #add python files. I ran into a problem with accidentally adding .git otherwise
+    for filename in glob.iglob(os.path.join(path,'*.py')):
+        repo.index.add([filename])
+        print 'added %s' % filename
 
-def git_init(repo_path):
-    repo = git.Repo(repo_path)
-    assert repo.bare == False
-    repo.git.init()
-    index = repo.git.index()
-    for filename in filecontents:
-        with open(os.path.join(repo_path,filename), 'wb') as pyfile:
-            pyfile.write(filecontents[filename])
-        index.add(os.path.join(repo_path,filename))
+    repo.index.commit('initial commit; automatically created repo and added files. need to add upstream')
 
-    index.commit('initial commit, gitignore and readme')
+def userConfig(username, email, repo):
+    '''locally set the username and email'''
+    config = repo.config_writer()
+    config.set_value('user', 'email', email)
+    config.set_value('user', 'name', username)
+    print 'set %s <%s>' % (username, email)
 
-if __name__ == "__main__":
+def createRepo(path):
+    '''access the repo'''
+    #bare means create the contents of .git
+    return git.Repo.init(path, bare=False)
+
+if __name__ == '__main__':
     arguments = docopt(__doc__, version=__version__)
-    if not arguments['<filename>']:
-        arguments['<filename>'] = os.getcwd()
 
-    print 'using path: %s' % (arguments['<filename>'])
-    git_init(arguments['<filename>'])
+    print arguments
+
+    if not arguments['<path>']:
+        arguments['<path>'] = os.getcwd()
+        print 'using current working directory as path %s' % arguments['<path>']
+    if not (arguments['<email>'] and arguments['<name>']):
+        arguments['<email>'] = 'Alex.OConnor@scss.tcd.ie'
+        arguments['<name>'] = 'Alex O\'Connor'
+        print 'using default username and email: %s : <%s>' % (arguments['<name>'], arguments['<email>'])
+
+    createFiles(arguments['<path>'])
+    #create the repo
+    repo = createRepo(arguments['<path>'])
+    userConfig(arguments['<name>'], arguments['<email>'], repo)
+    addFilesAndCommit(repo, arguments['<path>'])
